@@ -1,3 +1,64 @@
+### Node / JavaScript
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json*
+
+### Build output
+dist/
+build/
+.cache/
+.vite/
+
+### Vite / React
+*.local
+*.local.*
+
+### Logs
+logs/
+*.log
+*.log.*
+
+### Environment / secrets
+.env
+.env.*
+!.env.example
+
+### Editor & OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+.idea/
+.vscode/
+*.iml
+
+### Coverage / testing
+coverage/
+.nyc_output/
+
+### Storybook / misc tools
+storybook-static/
+.turbo/
+
+### Terraform
+**/.terraform/
+**/.terraform.lock.hcl
+**/terraform.tfstate
+**/terraform.tfstate.*
+crash.log
+crash.*.log
+
+### Others
+*.tgz
+*.gz
+*.zip
+*.pem
+
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies

@@ -59,3 +59,12 @@ module "ec2" {
   public_security_group = module.security_group.public_security_group
 }
 
+module "prometheus_ec2" {
+  source                = "./modules/ec2"
+  ami                   = var.ami
+  instance_type         = "t3.small"
+  public_subnet_id      = module.vpc.public_subnet_id
+  public_security_group = module.security_group.public_security_group
+  name                  = "prometheus-server"
+}
+

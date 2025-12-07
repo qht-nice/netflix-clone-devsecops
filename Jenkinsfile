@@ -53,7 +53,7 @@ pipeline{
         stage("Docker Build & Push"){
             steps{
                 script{
-                   withDockerRegistry(credentialsId: 'docker', toolName: 'docker'){   
+                   withDockerRegistry(credentialsId: 'dockerhub-cred', toolName: 'docker'){   
                        sh "docker build --build-arg TMDB_V3_API_KEY=${TMDB_token} -t netflix ."
                        sh "docker tag netflix qhtsg/netflix:latest "
                        sh "docker push qhtsg/netflix:latest "

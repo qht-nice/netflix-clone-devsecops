@@ -62,6 +62,15 @@ resource "aws_security_group" "public_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Node Exporter (default 9100)
+  ingress {
+    description = "Allow Node Exporter"
+    from_port   = 9100
+    to_port     = 9100
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   # Grafana (default 3000)
   ingress {
     description = "Allow Grafana"

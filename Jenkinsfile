@@ -7,6 +7,7 @@ pipeline{
     environment {
         SCANNER_HOME=tool 'sonar-scanner'
         TMDB_token=credentials('TMDB-token')
+        EMAIL_RECIPIENTS = 'quanghuytran335577@gmail.com'  
     }
     stages {
         stage('clean workspace'){
@@ -68,8 +69,31 @@ pipeline{
         }
         stage('Deploy to container'){
             steps{
-                sh 'docker run -d -p 8081:80 qhtsg/netflix:latest'
+                sh '''                    
+                    docker stop netflix || true
+                    docker rm netflix || true
+                    docker run -d -p 8081:80 qhtsg/netflix:latest
+                '''
             }
+        }
+    }
+    post {
+        always {
+            emailext (
+                subject: "[Automail] Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
+                body: """
+                    <h2>Jenkins Build Notification</h2>
+                    <p><strong>Project:</strong> ${env.JOB_NAME}</p>
+                    <p><strong>Build Number:</strong> #${env.BUILD_NUMBER}</p>
+                    <p><strong>Build Status:</strong> ${currentBuild.currentResult}</p>
+                    <p><strong>Build Duration:</strong> ${currentBuild.durationString}</p>
+                    <p><strong>Build URL:</strong> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                    <p><strong>Console Output:</strong> <a href="${env.BUILD_URL}console">View Console</a></p>
+                    <hr>
+                """,
+                mimeType: 'text/html',
+                to: "${env.EMAIL_RECIPIENTS}",
+            )
         }
     }
 }

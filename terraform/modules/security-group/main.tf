@@ -71,6 +71,15 @@ resource "aws_security_group" "public_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Alertmanager (default 9093)
+  ingress {
+    description = "Allow Alertmanager"
+    from_port   = 9093
+    to_port     = 9093
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   # Grafana (default 3000)
   ingress {
     description = "Allow Grafana"

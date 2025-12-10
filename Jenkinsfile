@@ -7,7 +7,7 @@ pipeline{
     environment {
         SCANNER_HOME=tool 'sonar-scanner'
         TMDB_token=credentials('TMDB-token')
-        EMAIL_RECIPIENTS = 'quanghuytran335577@gmail.com'  
+        EMAIL_RECIPIENTS = '22520578@gm.uit.edu.vn'  
     }
     stages {
         stage('clean workspace'){

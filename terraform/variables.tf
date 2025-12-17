@@ -15,3 +15,9 @@ variable "instance_type" {
     default = "m7i-flex.large"
 }
 
+variable "allowed_ssh_cidr" {
+    description = "CIDR block allowed for SSH access"
+    type        = string
+    default     = ""
+}
+

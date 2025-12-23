@@ -84,8 +84,7 @@ pipeline {
                                     export JWT_SECRET=${JWT_SECRET}
                                     export IMAGE_TAG=${BUILD_NUMBER}
 
-                                    docker compose build
-
+                                    docker compose -f docker-compose.ci.yml build
                                     docker tag qhtsg/netflix-frontend:latest qhtsg/netflix-frontend:${IMAGE_TAG}
                                     docker tag qhtsg/netflix-backend:latest  qhtsg/netflix-backend:${IMAGE_TAG}
 

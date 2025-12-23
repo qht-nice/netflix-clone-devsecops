@@ -48,6 +48,8 @@ module "vpc" {
 module "security_group" {
   source = "./modules/security-group"
   vpc_id = module.vpc.vpc_id
+  vpc_cidr_block = var.vpc_cidr_block
+  allowed_ssh_cidr = var.allowed_ssh_cidr
 }
 
 #EC2

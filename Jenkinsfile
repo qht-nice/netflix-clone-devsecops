@@ -1,105 +1,131 @@
-pipeline{
+pipeline {
     agent any
-    tools{
+
+    tools {
         jdk 'jdk21'
         nodejs 'node16'
     }
+
     environment {
-        SCANNER_HOME=tool 'sonar-scanner'
-        TMDB_token=credentials('TMDB-token')
-        EMAIL_RECIPIENTS = '22520578@gm.uit.edu.vn'  
+        SCANNER_HOME = tool 'sonar-scanner'
+        TMDB_token   = credentials('TMDB-token')
+        JWT_SECRET   = credentials('jwt-secret')
+        EMAIL_RECIPIENTS = '22520578@gm.uit.edu.vn'
     }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
     stages {
-        stage('clean workspace'){
-            steps{
+        stage('Clean Workspace') {
+            steps {
                 cleanWs()
             }
         }
-        stage('Checkout from Git'){
-            steps{
-                git branch: 'main', url: 'https://github.com/qht-nice/netflix-clone-devsecops.git'
+
+        stage('Checkout from Git') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/qht-nice/netflix-clone-devsecops.git'
             }
         }
-        stage("Sonarqube Analysis "){
-            steps{
+
+        stage('SonarQube Analysis') {
+            steps {
                 withSonarQubeEnv('sonar-server') {
-                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=netflix-clone \
-                    -Dsonar.projectKey=netflix-clone '''
+                    sh """
+                        ${SCANNER_HOME}/bin/sonar-scanner \
+                        -Dsonar.projectName=netflix-clone \
+                        -Dsonar.projectKey=netflix-clone
+                    """
                 }
             }
         }
-        stage("quality gate"){
-           steps {
+
+        stage('Quality Gate') {
+            steps {
                 script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'sonarqube-token' 
+                    waitForQualityGate abortPipeline: false,
+                        credentialsId: 'sonarqube-token'
                 }
-            } 
+            }
         }
+
         stage('Install Dependencies') {
             steps {
-                sh "npm install"
+                sh 'npm install'
             }
         }
+
         stage('Build & Security Scans') {
             parallel {
-                stage('Security Scans') {
-                    parallel {
-                        stage('OWASP FS SCAN') {
-                            steps {
-                                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
-                                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-                            }
-                        }
-                        stage('TRIVY FS SCAN') {
-                            steps {
-                                sh "trivy fs . > trivyfs.txt"
-                            }
-                        }
+                stage('OWASP FS Scan') {
+                    steps {
+                        dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit',
+                                        odcInstallation: 'DP-Check'
+                        dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
                     }
                 }
-                stage("Docker Build & Push"){
-                    steps{
-                        script{
-                           withDockerRegistry(credentialsId: 'dockerhub-cred', toolName: 'docker'){   
-                               sh "docker build --build-arg TMDB_V3_API_KEY=${TMDB_token} -t netflix ."
-                               sh "docker tag netflix qhtsg/netflix:latest "
-                               sh "docker push qhtsg/netflix:latest "
+
+                stage('Trivy FS Scan') {
+                    steps {
+                        sh 'trivy fs . > trivyfs.txt'
+                    }
+                }
+
+                stage('Docker Build & Push Images') {
+                    steps {
+                        script {
+                            withDockerRegistry(credentialsId: 'dockerhub-cred', toolName: 'docker') {
+                                sh '''
+                                    export TMDB_V3_API_KEY=${TMDB_token}
+                                    export JWT_SECRET=${JWT_SECRET}
+                                    export IMAGE_TAG=${BUILD_NUMBER}
+
+                                    docker compose build
+
+                                    docker tag qhtsg/netflix-frontend:latest qhtsg/netflix-frontend:${IMAGE_TAG}
+                                    docker tag qhtsg/netflix-backend:latest  qhtsg/netflix-backend:${IMAGE_TAG}
+
+                                    docker push qhtsg/netflix-frontend:${IMAGE_TAG}
+                                    docker push qhtsg/netflix-backend:${IMAGE_TAG}
+                                '''
                             }
                         }
                     }
                 }
             }
         }
-        stage("TRIVY"){
-            steps{
-                sh "trivy image qhtsg/netflix:latest > trivyimage.txt" 
-            }
-        }
-        stage('Deploy to container'){
-            steps{
-                sh '''                    
-                    docker rm -f netflix || true
-                    docker run -d --name netflix -p 8081:80 qhtsg/netflix:latest
+
+        stage('Trivy Image Scan (2 Images)') {
+            steps {
+                sh '''
+                    trivy image qhtsg/netflix-frontend:${BUILD_NUMBER}  > trivy-frontend.txt
+                    trivy image qhtsg/netflix-backend:${BUILD_NUMBER}  > trivy-backend.txt
                 '''
             }
         }
     }
+
     post {
         always {
-            emailext (
-                subject: "[Automail] Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
-                body: """
-                    <h2>Jenkins Build Notification</h2>
-                    <p><strong>Project:</strong> ${env.JOB_NAME}</p>
-                    <p><strong>Build Number:</strong> #${env.BUILD_NUMBER}</p>
-                    <p><strong>Build Status:</strong> ${currentBuild.currentResult}</p>
-                    <p><strong>Build Duration:</strong> ${currentBuild.durationString}</p>
-                    <p><strong>Build URL:</strong> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
-                    <p><strong>Console Output:</strong> <a href="${env.BUILD_URL}console">View Console</a></p>
-                    <hr>
-                """,
+            archiveArtifacts artifacts: '*.txt', fingerprint: true
+
+            emailext(
+                subject: "[Automail] Jenkins Build ${currentBuild.currentResult}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                 mimeType: 'text/html',
                 to: "${env.EMAIL_RECIPIENTS}",
+                body: """
+                    <h2>Jenkins Build Notification</h2>
+                    <p><b>Project:</b> ${env.JOB_NAME}</p>
+                    <p><b>Build Number:</b> ${env.BUILD_NUMBER}</p>
+                    <p><b>Status:</b> ${currentBuild.currentResult}</p>
+                    <p><b>Build URL:</b>
+                       <a href="${env.BUILD_URL}">${env.BUILD_URL}</a>
+                    </p>
+                """
             )
         }
     }

@@ -40,24 +40,32 @@ pipeline{
                 sh "npm install"
             }
         }
-        stage('OWASP FS SCAN') {
-            steps {
-                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-            }
-        }
-        stage('TRIVY FS SCAN') {
-            steps {
-                sh "trivy fs . > trivyfs.txt"
-            }
-        }
-        stage("Docker Build & Push"){
-            steps{
-                script{
-                   withDockerRegistry(credentialsId: 'dockerhub-cred', toolName: 'docker'){   
-                       sh "docker build --build-arg TMDB_V3_API_KEY=${TMDB_token} -t netflix ."
-                       sh "docker tag netflix qhtsg/netflix:latest "
-                       sh "docker push qhtsg/netflix:latest "
+        stage('Build & Security Scans') {
+            parallel {
+                stage('Security Scans') {
+                    parallel {
+                        stage('OWASP FS SCAN') {
+                            steps {
+                                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
+                                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+                            }
+                        }
+                        stage('TRIVY FS SCAN') {
+                            steps {
+                                sh "trivy fs . > trivyfs.txt"
+                            }
+                        }
+                    }
+                }
+                stage("Docker Build & Push"){
+                    steps{
+                        script{
+                           withDockerRegistry(credentialsId: 'dockerhub-cred', toolName: 'docker'){   
+                               sh "docker build --build-arg TMDB_V3_API_KEY=${TMDB_token} -t netflix ."
+                               sh "docker tag netflix qhtsg/netflix:latest "
+                               sh "docker push qhtsg/netflix:latest "
+                            }
+                        }
                     }
                 }
             }

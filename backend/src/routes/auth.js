@@ -31,6 +31,17 @@ router.post('/register', [
       return res.status(400).json({ message: 'User already exists' });
     }
 
+    // Check if username exists (only if provided)
+    if (username) {
+      const existingUsername = await pool.query(
+        'SELECT id FROM users WHERE username = $1',
+        [username]
+      );
+      if (existingUsername.rows.length > 0) {
+        return res.status(400).json({ message: 'Username already exists' });
+      }
+    }
+
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
@@ -60,6 +71,17 @@ router.post('/register', [
     });
   } catch (error) {
     console.error('Registration error:', error);
+    // Postgres unique violation (email/username already exists)
+    if (error && error.code === '23505') {
+      const constraint = error.constraint || '';
+      if (constraint.includes('users_email_key')) {
+        return res.status(400).json({ message: 'User already exists' });
+      }
+      if (constraint.includes('users_username_key')) {
+        return res.status(400).json({ message: 'Username already exists' });
+      }
+      return res.status(400).json({ message: 'User already exists' });
+    }
     res.status(500).json({ message: 'Server error' });
   }
 });

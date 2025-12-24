@@ -85,13 +85,13 @@ pipeline {
                                     export TMDB_V3_API_KEY=${TMDB_token}
                                     export JWT_SECRET=${JWT_SECRET}
 
-                                    # Tagging strategy:
-                                    # - PR builds: use a non-numeric tag (pr-<id>-<build>) so ArgoCD Image Updater (allow-tags: ^[0-9]+$) ignores it
-                                    # - main builds: use a monotonically increasing numeric tag (UTC timestamp) so Image Updater always moves forward
+                                    # Tagging strategy (short tags):
+                                    # - PR builds: publish a non-numeric tag (pr-<id>) so ArgoCD Image Updater (allow-tags: ^[0-9]+$) ignores PR images
+                                    # - main builds: publish a numeric tag using Jenkins BUILD_NUMBER (short)
                                     if [ -n "${CHANGE_ID:-}" ]; then
-                                      IMAGE_TAG="pr-${CHANGE_ID}-${BUILD_NUMBER}"
+                                      IMAGE_TAG="pr-${CHANGE_ID}"
                                     else
-                                      IMAGE_TAG="$(date -u +%Y%m%d%H%M%S)"
+                                      IMAGE_TAG="${BUILD_NUMBER}"
                                     fi
 
                                     echo "Using IMAGE_TAG=${IMAGE_TAG}"
@@ -100,14 +100,16 @@ pipeline {
                                     docker tag qhtsg/netflix-frontend:latest "qhtsg/netflix-frontend:${IMAGE_TAG}"
                                     docker tag qhtsg/netflix-backend:latest  "qhtsg/netflix-backend:${IMAGE_TAG}"
 
-                                    # Only push :latest from main (avoid PR clobbering prod-like deployments)
+                                    # Only push :latest and numeric tags from main (avoid PR clobbering deployments)
                                     if [ -z "${CHANGE_ID:-}" ]; then
                                       docker push qhtsg/netflix-frontend:latest
                                       docker push qhtsg/netflix-backend:latest
+                                      docker push "qhtsg/netflix-frontend:${IMAGE_TAG}"
+                                      docker push "qhtsg/netflix-backend:${IMAGE_TAG}"
+                                    else
+                                      docker push "qhtsg/netflix-frontend:${IMAGE_TAG}"
+                                      docker push "qhtsg/netflix-backend:${IMAGE_TAG}"
                                     fi
-
-                                    docker push "qhtsg/netflix-frontend:${IMAGE_TAG}"
-                                    docker push "qhtsg/netflix-backend:${IMAGE_TAG}"
                                 '''
                             }
                         }
@@ -119,14 +121,15 @@ pipeline {
         stage('Trivy Image Scan (2 Images)') {
             steps {
                 sh '''
-                    # Keep this aligned with IMAGE_TAG above. For PR builds, scan the PR tag. For main builds, scan :latest.
+                    # Keep this aligned with IMAGE_TAG above.
                     if [ -n "${CHANGE_ID:-}" ]; then
-                      IMAGE_TAG="pr-${CHANGE_ID}-${BUILD_NUMBER}"
+                      IMAGE_TAG="pr-${CHANGE_ID}"
                       trivy image "qhtsg/netflix-frontend:${IMAGE_TAG}"  > trivy-frontend.txt
                       trivy image "qhtsg/netflix-backend:${IMAGE_TAG}"   > trivy-backend.txt
                     else
-                      trivy image qhtsg/netflix-frontend:latest  > trivy-frontend.txt
-                      trivy image qhtsg/netflix-backend:latest   > trivy-backend.txt
+                      IMAGE_TAG="${BUILD_NUMBER}"
+                      trivy image "qhtsg/netflix-frontend:${IMAGE_TAG}"  > trivy-frontend.txt
+                      trivy image "qhtsg/netflix-backend:${IMAGE_TAG}"   > trivy-backend.txt
                     fi
                 '''
             }

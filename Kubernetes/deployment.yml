@@ -1,21 +1,136 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: netflix-app
+  name: netflix-postgres
   labels:
-    app: netflix-app
+    app: netflix-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: netflix-postgres
+  template:
+    metadata:
+      labels:
+        app: netflix-postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: netflix_clone
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          value: postgres
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netflix-backend
+  labels:
+    app: netflix-backend
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: backend=qhtsg/netflix-backend
+    argocd-image-updater.argoproj.io/backend.update-strategy: latest
+    argocd-image-updater.argoproj.io/backend.allow-tags: regexp:^[0-9]+$
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: netflix-app
+      app: netflix-backend
   template:
     metadata:
       labels:
-        app: netflix-app
+        app: netflix-backend
     spec:
       containers:
-      - name: netflix-app
-        image: nasi101/netflix:latest
+      - name: backend
+        image: qhtsg/netflix-backend:latest
+        ports:
+        - containerPort: 3001
+        env:
+        - name: DB_HOST
+          value: netflix-postgres
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: netflix_clone
+        - name: DB_USER
+          value: postgres
+        - name: DB_PASSWORD
+          value: postgres
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: netflix-secrets
+              key: jwt-secret
+        - name: PORT
+          value: "3001"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 10
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netflix-frontend
+  labels:
+    app: netflix-frontend
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: frontend=qhtsg/netflix-frontend
+    argocd-image-updater.argoproj.io/frontend.update-strategy: latest
+    argocd-image-updater.argoproj.io/frontend.allow-tags: regexp:^[0-9]+$
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: netflix-frontend
+  template:
+    metadata:
+      labels:
+        app: netflix-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: qhtsg/netflix-frontend:latest
         ports:
         - containerPort: 80
+        env:
+        - name: VITE_APP_API_URL
+          value: http://netflix-backend:3001

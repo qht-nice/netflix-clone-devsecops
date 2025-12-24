@@ -1,9 +1,37 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: netflix-app
+  name: netflix-postgres
   labels:
-    app: netflix-app
+    app: netflix-postgres
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: netflix-postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: netflix-backend
+  labels:
+    app: netflix-backend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3001
+    targetPort: 3001
+  selector:
+    app: netflix-backend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: netflix-frontend
+  labels:
+    app: netflix-frontend
 spec:
   type: NodePort
   ports:
@@ -11,4 +39,4 @@ spec:
     targetPort: 80
     nodePort: 30007
   selector:
-    app: netflix-app
+    app: netflix-frontend

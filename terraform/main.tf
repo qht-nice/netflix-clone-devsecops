@@ -1,15 +1,15 @@
 terraform {
   required_providers {
     aws = {
-      source = "hashicorp/aws"
+      source  = "hashicorp/aws"
       version = "~> 5.11"
     }
     tls = {
-      source = "hashicorp/tls"
+      source  = "hashicorp/tls"
       version = "~> 4.0"
     }
     local = {
-      source = "hashicorp/local"
+      source  = "hashicorp/local"
       version = "~> 2.0"
     }
   }
@@ -39,25 +39,45 @@ resource "local_file" "TF-key" {
 
 # VPC
 module "vpc" {
-  source = "./modules/vpc"
-  vpc_cidr_block = var.vpc_cidr_block
-  cidr_public_subnet = var.cidr_public_subnet
+  source               = "./modules/vpc"
+  vpc_cidr_block       = var.vpc_cidr_block
+  cidr_public_subnet   = var.cidr_public_subnet
+  cidr_public_subnet_b = var.cidr_public_subnet_b
 }
 
 #Security Groups
 module "security_group" {
-  source = "./modules/security-group"
-  vpc_id = module.vpc.vpc_id
-  vpc_cidr_block = var.vpc_cidr_block
+  source           = "./modules/security-group"
+  vpc_id           = module.vpc.vpc_id
+  vpc_cidr_block   = var.vpc_cidr_block
   allowed_ssh_cidr = var.allowed_ssh_cidr
+}
+
+# EKS Cluster
+module "eks" {
+  source                       = "./modules/eks"
+  cluster_name                 = "netflix-eks"
+  vpc_id                       = module.vpc.vpc_id
+  vpc_cidr_block               = var.vpc_cidr_block
+  prometheus_security_group_id = module.security_group.public_security_group.id
+  subnet_ids = [
+    module.vpc.public_subnet_id,
+    module.vpc.public_subnet_b_id
+  ]
+
+  node_instance_type = "c7i-flex.large"
+  node_desired_size  = 1
+  node_min_size      = 1
+  node_max_size      = 1
+  node_disk_size     = 20
 }
 
 #EC2
 module "ec2" {
-  source = "./modules/ec2"
-  ami = var.ami
-  instance_type = var.instance_type
-  public_subnet_id = module.vpc.public_subnet_id
+  source                = "./modules/ec2"
+  ami                   = var.ami
+  instance_type         = var.instance_type
+  public_subnet_id      = module.vpc.public_subnet_id
   public_security_group = module.security_group.public_security_group
 }
 

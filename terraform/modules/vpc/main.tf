@@ -17,9 +17,21 @@ resource "aws_subnet" "public_subnet" {
   vpc_id            = aws_vpc.vpc.id
   cidr_block        = var.cidr_public_subnet
   availability_zone = data.aws_availability_zones.available.names[0]
+  map_public_ip_on_launch = true
 
   tags = {
     Name = "netflix-subnet"
+  }
+}
+
+resource "aws_subnet" "public_subnet_b" {
+  vpc_id            = aws_vpc.vpc.id
+  cidr_block        = var.cidr_public_subnet_b
+  availability_zone = data.aws_availability_zones.available.names[1]
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "netflix-subnet-b"
   }
 }
 #Internet gateway
@@ -70,5 +82,10 @@ resource "aws_route_table" "public_route_table" {
 
 resource "aws_route_table_association" "public_subnet_rt-association" {
   subnet_id      = aws_subnet.public_subnet.id
+  route_table_id = aws_route_table.public_route_table.id
+}
+
+resource "aws_route_table_association" "public_subnet_b_rt-association" {
+  subnet_id      = aws_subnet.public_subnet_b.id
   route_table_id = aws_route_table.public_route_table.id
 }

@@ -79,7 +79,7 @@ pipeline {
                         script {
                             withDockerRegistry(credentialsId: 'dockerhub-cred', toolName: 'docker') {
                                 sh '''
-                                    set -euo pipefail
+                                    set -eu
 
                                     export TMDB_V3_API_KEY=${TMDB_token}
                                     export JWT_SECRET=${JWT_SECRET}

@@ -10,6 +10,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import Avatar from "@mui/material/Avatar";
 import Tooltip from "@mui/material/Tooltip";
 import MenuItem from "@mui/material/MenuItem";
+import { useNavigate } from "react-router-dom";
 import useOffSetTop from "src/hooks/useOffSetTop";
 import { APP_BAR_HEIGHT } from "src/constant";
 import Logo from "../Logo";
@@ -20,6 +21,7 @@ const pages = ["My List", "Movies", "Tv Shows"];
 
 const MainHeader = () => {
   const isOffset = useOffSetTop(APP_BAR_HEIGHT);
+  const navigate = useNavigate();
 
   const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(
     null
@@ -41,6 +43,17 @@ const MainHeader = () => {
 
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
+  };
+
+  const handleUserMenuClick = (setting: string) => {
+    handleCloseUserMenu();
+    if (setting === "Logout") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      navigate("/login");
+    } else if (setting === "Account") {
+      navigate("/account");
+    }
   };
 
   return (
@@ -154,7 +167,7 @@ const MainHeader = () => {
             onClose={handleCloseUserMenu}
           >
             {["Account", "Logout"].map((setting) => (
-              <MenuItem key={setting} onClick={handleCloseUserMenu}>
+              <MenuItem key={setting} onClick={() => handleUserMenuClick(setting)}>
                 <Typography textAlign="center">{setting}</Typography>
               </MenuItem>
             ))}

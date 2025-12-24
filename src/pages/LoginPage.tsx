@@ -13,12 +13,12 @@ import {
 // Construct API URL from current host (works in both dev and production)
 const getApiUrl = () => {
   const envUrl = import.meta.env.VITE_APP_API_URL;
-  if (envUrl && !envUrl.includes('localhost')) {
+  if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('netflix-backend')) {
     return envUrl;
   }
-  // Use same host as frontend but port 3001
-  const host = window.location.hostname;
-  return `http://${host}:3001`;
+  // Use same host as frontend but port 30008 (NodePort for backend)
+  const host = globalThis?.location?.hostname || 'localhost';
+  return `http://${host}:30008`;
 };
 const API_URL = getApiUrl();
 

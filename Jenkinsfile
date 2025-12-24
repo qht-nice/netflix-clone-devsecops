@@ -27,8 +27,8 @@ pipeline {
 
         stage('Checkout from Git') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/qht-nice/netflix-clone-devsecops.git'
+                // Multibranch/PR builds: build the actual PR source (not hardcoded main)
+                checkout scm
             }
         }
 
@@ -85,14 +85,16 @@ pipeline {
                                     export TMDB_V3_API_KEY=${TMDB_token}
                                     export JWT_SECRET=${JWT_SECRET}
 
-                                    # Tagging strategy (short tags):
-                                    # - PR builds: publish a non-numeric tag (pr-<id>) so ArgoCD Image Updater (allow-tags: ^[0-9]+$) ignores PR images
-                                    # - main builds: publish a numeric tag using Jenkins BUILD_NUMBER (short)
-                                    if [ -n "${CHANGE_ID:-}" ]; then
-                                      IMAGE_TAG="pr-${CHANGE_ID}"
-                                    else
-                                      IMAGE_TAG="${BUILD_NUMBER}"
+                                    # PR-only tagging strategy (numeric + changes every build):
+                                    # - CHANGE_ID is the PR number (e.g. 21)
+                                    # - BUILD_NUMBER increments for each run of the PR job
+                                    # Combine them into a single numeric tag so Image Updater (allow-tags: ^[0-9]+$) can track it.
+                                    # Assumes BUILD_NUMBER < 10000
+                                    if [ -z "${CHANGE_ID:-}" ]; then
+                                      echo "ERROR: Expected PR build (CHANGE_ID missing)."
+                                      exit 1
                                     fi
+                                    IMAGE_TAG=$((CHANGE_ID * 10000 + BUILD_NUMBER))
 
                                     echo "Using IMAGE_TAG=${IMAGE_TAG}"
 
@@ -100,16 +102,9 @@ pipeline {
                                     docker tag qhtsg/netflix-frontend:latest "qhtsg/netflix-frontend:${IMAGE_TAG}"
                                     docker tag qhtsg/netflix-backend:latest  "qhtsg/netflix-backend:${IMAGE_TAG}"
 
-                                    # Only push :latest and numeric tags from main (avoid PR clobbering deployments)
-                                    if [ -z "${CHANGE_ID:-}" ]; then
-                                      docker push qhtsg/netflix-frontend:latest
-                                      docker push qhtsg/netflix-backend:latest
-                                      docker push "qhtsg/netflix-frontend:${IMAGE_TAG}"
-                                      docker push "qhtsg/netflix-backend:${IMAGE_TAG}"
-                                    else
-                                      docker push "qhtsg/netflix-frontend:${IMAGE_TAG}"
-                                      docker push "qhtsg/netflix-backend:${IMAGE_TAG}"
-                                    fi
+                                    # PR-only: do NOT push :latest (avoid clobbering)
+                                    docker push "qhtsg/netflix-frontend:${IMAGE_TAG}"
+                                    docker push "qhtsg/netflix-backend:${IMAGE_TAG}"
                                 '''
                             }
                         }
@@ -122,15 +117,13 @@ pipeline {
             steps {
                 sh '''
                     # Keep this aligned with IMAGE_TAG above.
-                    if [ -n "${CHANGE_ID:-}" ]; then
-                      IMAGE_TAG="pr-${CHANGE_ID}"
-                      trivy image "qhtsg/netflix-frontend:${IMAGE_TAG}"  > trivy-frontend.txt
-                      trivy image "qhtsg/netflix-backend:${IMAGE_TAG}"   > trivy-backend.txt
-                    else
-                      IMAGE_TAG="${BUILD_NUMBER}"
-                      trivy image "qhtsg/netflix-frontend:${IMAGE_TAG}"  > trivy-frontend.txt
-                      trivy image "qhtsg/netflix-backend:${IMAGE_TAG}"   > trivy-backend.txt
+                    if [ -z "${CHANGE_ID:-}" ]; then
+                      echo "ERROR: Expected PR build (CHANGE_ID missing)."
+                      exit 1
                     fi
+                    IMAGE_TAG=$((CHANGE_ID * 10000 + BUILD_NUMBER))
+                    trivy image "qhtsg/netflix-frontend:${IMAGE_TAG}"  > trivy-frontend.txt
+                    trivy image "qhtsg/netflix-backend:${IMAGE_TAG}"   > trivy-backend.txt
                 '''
             }
         }

@@ -125,8 +125,8 @@ export function Component() {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box sx={{ mt: 8 }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'green', py: 8 }}>
+      <Container maxWidth="sm">
         <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom align="center">
             Sign In
@@ -178,8 +178,8 @@ export function Component() {
             </Link>
           </Typography>
         </Paper>
-      </Box>
-    </Container>
+      </Container>
+    </Box>
   );
 }
 

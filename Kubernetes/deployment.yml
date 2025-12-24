@@ -65,10 +65,6 @@ metadata:
   name: netflix-backend
   labels:
     app: netflix-backend
-  annotations:
-    argocd-image-updater.argoproj.io/image-list: backend=qhtsg/netflix-backend
-    argocd-image-updater.argoproj.io/backend.update-strategy: latest
-    argocd-image-updater.argoproj.io/backend.allow-tags: regexp:^[0-9]+$
 spec:
   replicas: 2
   selector:
@@ -81,7 +77,7 @@ spec:
     spec:
       initContainers:
       - name: migrate
-        image: qhtsg/netflix-backend:latest
+        image: qhtsg/netflix-backend:1
         command: ['sh', '-c', 'npm run migrate']
         env:
         - name: DB_HOST
@@ -101,7 +97,7 @@ spec:
               key: jwt-secret
       containers:
       - name: backend
-        image: qhtsg/netflix-backend:latest
+        image: qhtsg/netflix-backend:1
         ports:
         - containerPort: 3001
         env:
@@ -141,10 +137,6 @@ metadata:
   name: netflix-frontend
   labels:
     app: netflix-frontend
-  annotations:
-    argocd-image-updater.argoproj.io/image-list: frontend=qhtsg/netflix-frontend
-    argocd-image-updater.argoproj.io/frontend.update-strategy: latest
-    argocd-image-updater.argoproj.io/frontend.allow-tags: regexp:^[0-9]+$
 spec:
   replicas: 2
   selector:
@@ -157,7 +149,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: qhtsg/netflix-frontend:latest
+        image: qhtsg/netflix-frontend:1
         ports:
         - containerPort: 80
         env:

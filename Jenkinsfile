@@ -27,7 +27,6 @@ pipeline {
 
         stage('Checkout from Git') {
             steps {
-                // Multibranch/PR builds: build the actual PR source (not hardcoded main)
                 checkout scm
             }
         }
@@ -85,11 +84,6 @@ pipeline {
                                     export TMDB_V3_API_KEY=${TMDB_token}
                                     export JWT_SECRET=${JWT_SECRET}
 
-                                    # PR-only tagging strategy (numeric + changes every build):
-                                    # - CHANGE_ID is the PR number (e.g. 21)
-                                    # - BUILD_NUMBER increments for each run of the PR job
-                                    # Combine them into a single numeric tag so Image Updater (allow-tags: ^[0-9]+$) can track it.
-                                    # Assumes BUILD_NUMBER < 10000
                                     if [ -z "${CHANGE_ID:-}" ]; then
                                       echo "ERROR: Expected PR build (CHANGE_ID missing)."
                                       exit 1
@@ -102,7 +96,6 @@ pipeline {
                                     docker tag qhtsg/netflix-frontend:latest "qhtsg/netflix-frontend:${IMAGE_TAG}"
                                     docker tag qhtsg/netflix-backend:latest  "qhtsg/netflix-backend:${IMAGE_TAG}"
 
-                                    # PR-only: do NOT push :latest (avoid clobbering)
                                     docker push "qhtsg/netflix-frontend:${IMAGE_TAG}"
                                     docker push "qhtsg/netflix-backend:${IMAGE_TAG}"
                                 '''
@@ -116,7 +109,6 @@ pipeline {
         stage('Trivy Image Scan (2 Images)') {
             steps {
                 sh '''
-                    # Keep this aligned with IMAGE_TAG above.
                     if [ -z "${CHANGE_ID:-}" ]; then
                       echo "ERROR: Expected PR build (CHANGE_ID missing)."
                       exit 1

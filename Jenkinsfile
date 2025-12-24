@@ -27,8 +27,7 @@ pipeline {
 
         stage('Checkout from Git') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/qht-nice/netflix-clone-devsecops.git'
+                checkout scm
             }
         }
 
@@ -80,18 +79,25 @@ pipeline {
                         script {
                             withDockerRegistry(credentialsId: 'dockerhub-cred', toolName: 'docker') {
                                 sh '''
+                                    set -eu
+
                                     export TMDB_V3_API_KEY=${TMDB_token}
                                     export JWT_SECRET=${JWT_SECRET}
-                                    export IMAGE_TAG=${BUILD_NUMBER}
+
+                                    if [ -z "${CHANGE_ID:-}" ]; then
+                                      echo "ERROR: Expected PR build (CHANGE_ID missing)."
+                                      exit 1
+                                    fi
+                                    IMAGE_TAG=$((CHANGE_ID * 10000 + BUILD_NUMBER))
+
+                                    echo "Using IMAGE_TAG=${IMAGE_TAG}"
 
                                     docker compose -f docker-compose.ci.yml build
-                                    docker tag qhtsg/netflix-frontend:latest qhtsg/netflix-frontend:${IMAGE_TAG}
-                                    docker tag qhtsg/netflix-backend:latest  qhtsg/netflix-backend:${IMAGE_TAG}
+                                    docker tag qhtsg/netflix-frontend:latest "qhtsg/netflix-frontend:${IMAGE_TAG}"
+                                    docker tag qhtsg/netflix-backend:latest  "qhtsg/netflix-backend:${IMAGE_TAG}"
 
-                                    docker push qhtsg/netflix-frontend:latest
-                                    docker push qhtsg/netflix-frontend:${IMAGE_TAG}
-                                    docker push qhtsg/netflix-backend:latest
-                                    docker push qhtsg/netflix-backend:${IMAGE_TAG}
+                                    docker push "qhtsg/netflix-frontend:${IMAGE_TAG}"
+                                    docker push "qhtsg/netflix-backend:${IMAGE_TAG}"
                                 '''
                             }
                         }
@@ -103,8 +109,13 @@ pipeline {
         stage('Trivy Image Scan (2 Images)') {
             steps {
                 sh '''
-                    trivy image qhtsg/netflix-frontend:${BUILD_NUMBER}  > trivy-frontend.txt
-                    trivy image qhtsg/netflix-backend:${BUILD_NUMBER}  > trivy-backend.txt
+                    if [ -z "${CHANGE_ID:-}" ]; then
+                      echo "ERROR: Expected PR build (CHANGE_ID missing)."
+                      exit 1
+                    fi
+                    IMAGE_TAG=$((CHANGE_ID * 10000 + BUILD_NUMBER))
+                    trivy image "qhtsg/netflix-frontend:${IMAGE_TAG}"  > trivy-frontend.txt
+                    trivy image "qhtsg/netflix-backend:${IMAGE_TAG}"   > trivy-backend.txt
                 '''
             }
         }

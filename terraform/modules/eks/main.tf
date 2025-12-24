@@ -166,3 +166,15 @@ resource "aws_security_group_rule" "eks_node_prometheus_cidr" {
   description       = "Allow node-exporter from VPC"
 }
 
+# Allow NodePort 30007 for Netflix frontend access from internet
+resource "aws_security_group_rule" "eks_node_nodeport_frontend" {
+  count             = local.eks_node_sg_id != null ? 1 : 0
+  type              = "ingress"
+  from_port         = 30007
+  to_port           = 30007
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = local.eks_node_sg_id
+  description       = "Allow NodePort 30007 for Netflix frontend access"
+}
+

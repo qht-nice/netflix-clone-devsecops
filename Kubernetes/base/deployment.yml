@@ -65,6 +65,11 @@ metadata:
   name: netflix-backend
   labels:
     app: netflix-backend
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: backend=qhtsg/netflix-backend
+    argocd-image-updater.argoproj.io/backend.update-strategy: newest-build
+    argocd-image-updater.argoproj.io/backend.allow-tags: regexp:^[0-9]+$
+    argocd-image-updater.argoproj.io/backend.update-init-containers: "true"
 spec:
   replicas: 2
   selector:
@@ -137,6 +142,10 @@ metadata:
   name: netflix-frontend
   labels:
     app: netflix-frontend
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: frontend=qhtsg/netflix-frontend
+    argocd-image-updater.argoproj.io/frontend.update-strategy: newest-build
+    argocd-image-updater.argoproj.io/frontend.allow-tags: regexp:^[0-9]+$
 spec:
   replicas: 2
   selector:
@@ -154,4 +163,4 @@ spec:
         - containerPort: 80
         env:
         - name: VITE_APP_API_URL
-          value: http://netflix-backend:3001
+          value: ""

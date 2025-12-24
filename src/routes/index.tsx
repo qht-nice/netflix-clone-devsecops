@@ -31,6 +31,18 @@ const router = createBrowserRouter([
       },
     ],
   },
+  {
+    path: "/login",
+    lazy: () => import("src/pages/LoginPage"),
+  },
+  {
+    path: "/register",
+    lazy: () => import("src/pages/RegisterPage"),
+  },
+  {
+    path: "/account",
+    lazy: () => import("src/pages/AccountPage"),
+  },
 ]);
 
 export default router;

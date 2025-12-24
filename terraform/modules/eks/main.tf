@@ -130,8 +130,8 @@ data "aws_security_groups" "eks_node_sg" {
   }
   
   filter {
-    name   = "tag:aws:eks:nodegroup-name"
-    values = ["${local.cluster_name}-ng"]
+    name   = "tag:kubernetes.io/cluster/${aws_eks_cluster.this.name}"
+    values = ["owned"]
   }
   
   depends_on = [aws_eks_node_group.this]
@@ -188,5 +188,16 @@ resource "aws_security_group_rule" "eks_node_nodeport_backend" {
   cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = local.eks_node_sg_id
   description       = "Allow NodePort 30008 for Netflix backend access"
+}
+
+resource "aws_security_group_rule" "eks_node_nodeport_node_exporter" {
+  count             = local.eks_node_sg_id != null ? 1 : 0
+  type              = "ingress"
+  from_port         = 30100
+  to_port           = 30100
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = local.eks_node_sg_id
+  description       = "Allow NodePort 30100 for node-exporter access"
 }
 

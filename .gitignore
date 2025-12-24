@@ -11,7 +11,7 @@ dist/
 build/
 .cache/
 .vite/
-
+tfplan
 ### Vite / React
 *.local
 *.local.*

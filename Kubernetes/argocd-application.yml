@@ -6,17 +6,6 @@ metadata:
   annotations:
     argocd-image-updater.argoproj.io/enabled: "true"
     argocd-image-updater.argoproj.io/write-back-method: git
-    argocd-image-updater.argoproj.io/image-list: backend=qhtsg/netflix-backend,frontend=qhtsg/netflix-frontend
-
-    argocd-image-updater.argoproj.io/backend.update-strategy: newest-build
-    argocd-image-updater.argoproj.io/backend.allow-tags: regexp:^[0-9]+$
-    argocd-image-updater.argoproj.io/backend.update-init-containers: "true"
-
-    argocd-image-updater.argoproj.io/frontend.update-strategy: newest-build
-    argocd-image-updater.argoproj.io/frontend.allow-tags: regexp:^[0-9]+$
-
-    argocd-image-updater.argoproj.io/ignore: postgres
-
     argocd-image-updater.argoproj.io/git-branch: main
     argocd-image-updater.argoproj.io/git-repo: https://github.com/qht-nice/netflix-clone-devsecops.git
     argocd-image-updater.argoproj.io/pull-secret: pullsecret:argocd/argocd-image-updater-secret
@@ -25,9 +14,8 @@ spec:
   source:
     repoURL: https://github.com/qht-nice/netflix-clone-devsecops.git
     targetRevision: main
-    path: Kubernetes
-    directory:
-      recurse: true
+    path: Kubernetes/base
+    kustomize: {}
   destination:
     server: https://kubernetes.default.svc
     namespace: default

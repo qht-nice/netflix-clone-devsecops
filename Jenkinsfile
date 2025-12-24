@@ -88,7 +88,9 @@ pipeline {
                                     docker tag qhtsg/netflix-frontend:latest qhtsg/netflix-frontend:${IMAGE_TAG}
                                     docker tag qhtsg/netflix-backend:latest  qhtsg/netflix-backend:${IMAGE_TAG}
 
+                                    docker push qhtsg/netflix-frontend:latest
                                     docker push qhtsg/netflix-frontend:${IMAGE_TAG}
+                                    docker push qhtsg/netflix-backend:latest
                                     docker push qhtsg/netflix-backend:${IMAGE_TAG}
                                 '''
                             }

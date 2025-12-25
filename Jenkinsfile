@@ -31,6 +31,34 @@ pipeline {
             }
         }
 
+        stage('Detect Changes') {
+            steps {
+                script {
+                    def targetBranch = env.CHANGE_TARGET ?: 'dev'
+                    sh "git fetch --no-tags origin ${targetBranch}:${targetBranch} >/dev/null 2>&1 || true"
+
+                    def changedFiles = sh(
+                        returnStdout: true,
+                        script: "git diff --name-only origin/${targetBranch}...HEAD || true"
+                    ).trim().split("\\r?\\n").findAll { it?.trim() }
+
+                    def backendChanged = changedFiles.any { it.startsWith('backend/') }
+                    def frontendChanged = changedFiles.any {
+                        it.startsWith('src/') || it.startsWith('public/') || [
+                            'Dockerfile', 'nginx.conf', 'package.json', 'yarn.lock', 'vite.config.ts',
+                            'tsconfig.json', 'tsconfig.node.json', 'index.html', 'vercel.json'
+                        ].contains(it)
+                    }
+
+                    env.BUILD_BACKEND = backendChanged ? 'true' : 'false'
+                    env.BUILD_FRONTEND = frontendChanged ? 'true' : 'false'
+
+                    echo "Changed files (${changedFiles.size()}): ${changedFiles}"
+                    echo "BUILD_BACKEND=${env.BUILD_BACKEND}, BUILD_FRONTEND=${env.BUILD_FRONTEND}"
+                }
+            }
+        }
+
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonar-server') {
@@ -75,6 +103,9 @@ pipeline {
                 }
 
                 stage('Docker Build & Push Images') {
+                    when {
+                        expression { return env.BUILD_BACKEND == 'true' || env.BUILD_FRONTEND == 'true' }
+                    }
                     steps {
                         script {
                             withDockerRegistry(credentialsId: 'dockerhub-cred', toolName: 'docker') {
@@ -88,16 +119,25 @@ pipeline {
                                       echo "ERROR: Expected PR build (CHANGE_ID missing)."
                                       exit 1
                                     fi
-                                    IMAGE_TAG=$((CHANGE_ID * 10 + BUILD_NUMBER))
+                                    IMAGE_TAG=$((CHANGE_ID * 100 + BUILD_NUMBER))
 
                                     echo "Using IMAGE_TAG=${IMAGE_TAG}"
 
-                                    docker compose -f docker-compose.ci.yml build
-                                    docker tag qhtsg/netflix-frontend:latest "qhtsg/netflix-frontend:${IMAGE_TAG}"
-                                    docker tag qhtsg/netflix-backend:latest  "qhtsg/netflix-backend:${IMAGE_TAG}"
+                                    if [ "${BUILD_FRONTEND}" = "true" ]; then
+                                      docker compose -f docker-compose.ci.yml build frontend
+                                      docker tag qhtsg/netflix-frontend:latest "qhtsg/netflix-frontend:${IMAGE_TAG}"
+                                      docker push "qhtsg/netflix-frontend:${IMAGE_TAG}"
+                                    else
+                                      echo "Frontend unchanged -> skip build/push"
+                                    fi
 
-                                    docker push "qhtsg/netflix-frontend:${IMAGE_TAG}"
-                                    docker push "qhtsg/netflix-backend:${IMAGE_TAG}"
+                                    if [ "${BUILD_BACKEND}" = "true" ]; then
+                                      docker compose -f docker-compose.ci.yml build backend
+                                      docker tag qhtsg/netflix-backend:latest  "qhtsg/netflix-backend:${IMAGE_TAG}"
+                                      docker push "qhtsg/netflix-backend:${IMAGE_TAG}"
+                                    else
+                                      echo "Backend unchanged -> skip build/push"
+                                    fi
                                 '''
                             }
                         }
@@ -106,16 +146,23 @@ pipeline {
             }
         }
 
-        stage('Trivy Image Scan (2 Images)') {
+        stage('Trivy Image Scan') {
+            when {
+                expression { return env.BUILD_BACKEND == 'true' || env.BUILD_FRONTEND == 'true' }
+            }
             steps {
                 sh '''
                     if [ -z "${CHANGE_ID:-}" ]; then
                       echo "ERROR: Expected PR build (CHANGE_ID missing)."
                       exit 1
                     fi
-                    IMAGE_TAG=$((CHANGE_ID * 10 + BUILD_NUMBER))
-                    trivy image "qhtsg/netflix-frontend:${IMAGE_TAG}"  > trivy-frontend.txt
-                    trivy image "qhtsg/netflix-backend:${IMAGE_TAG}"   > trivy-backend.txt
+                    IMAGE_TAG=$((CHANGE_ID * 100 + BUILD_NUMBER))
+                    if [ "${BUILD_FRONTEND}" = "true" ]; then
+                      trivy image "qhtsg/netflix-frontend:${IMAGE_TAG}"  > trivy-frontend.txt
+                    fi
+                    if [ "${BUILD_BACKEND}" = "true" ]; then
+                      trivy image "qhtsg/netflix-backend:${IMAGE_TAG}"   > trivy-backend.txt
+                    fi
                 '''
             }
         }

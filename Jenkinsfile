@@ -88,7 +88,7 @@ pipeline {
                                       echo "ERROR: Expected PR build (CHANGE_ID missing)."
                                       exit 1
                                     fi
-                                    IMAGE_TAG=$((CHANGE_ID * 10000 + BUILD_NUMBER))
+                                    IMAGE_TAG=$((CHANGE_ID * 10 + BUILD_NUMBER))
 
                                     echo "Using IMAGE_TAG=${IMAGE_TAG}"
 
@@ -113,7 +113,7 @@ pipeline {
                       echo "ERROR: Expected PR build (CHANGE_ID missing)."
                       exit 1
                     fi
-                    IMAGE_TAG=$((CHANGE_ID * 10000 + BUILD_NUMBER))
+                    IMAGE_TAG=$((CHANGE_ID * 10 + BUILD_NUMBER))
                     trivy image "qhtsg/netflix-frontend:${IMAGE_TAG}"  > trivy-frontend.txt
                     trivy image "qhtsg/netflix-backend:${IMAGE_TAG}"   > trivy-backend.txt
                 '''

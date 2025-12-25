@@ -30,19 +30,11 @@ resource "aws_security_group" "public_security_group" {
 
   # Application ports
   ingress {
-    description = "Allow app port 8080 from VPC only"
+    description = "Allow webhook port 8080 (public)"
     from_port   = 8080
     to_port     = 8080
     protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr_block]
-  }
-
-  ingress {
-    description = "Allow app port 8081 from VPC only"
-    from_port   = 8081
-    to_port     = 8081
-    protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr_block]
+    cidr_blocks = var.webhook_cidrs
   }
 
   ingress {

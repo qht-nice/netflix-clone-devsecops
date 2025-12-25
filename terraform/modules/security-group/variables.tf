@@ -10,3 +10,9 @@ variable "allowed_ssh_cidr" {
   type        = string
   default     = ""
 }
+
+variable "webhook_cidrs" {
+  description = "CIDR blocks allowed to reach webhook port 8080 (e.g., GitHub webhook IP ranges)."
+  type        = list(string)
+  default     = []
+}

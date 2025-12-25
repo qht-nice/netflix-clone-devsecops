@@ -11,4 +11,4 @@ images:
 - name: qhtsg/netflix-backend
   newTag: "501"
 - name: qhtsg/netflix-frontend
-  newTag: "501"
+  newTag: "502"

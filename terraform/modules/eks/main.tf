@@ -128,12 +128,12 @@ data "aws_security_groups" "eks_node_sg" {
     name   = "tag:aws:eks:cluster-name"
     values = [aws_eks_cluster.this.name]
   }
-  
+
   filter {
     name   = "tag:kubernetes.io/cluster/${aws_eks_cluster.this.name}"
     values = ["owned"]
   }
-  
+
   depends_on = [aws_eks_node_group.this]
 }
 

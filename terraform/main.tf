@@ -51,6 +51,7 @@ module "security_group" {
   vpc_id           = module.vpc.vpc_id
   vpc_cidr_block   = var.vpc_cidr_block
   allowed_ssh_cidr = var.allowed_ssh_cidr
+  webhook_cidrs    = var.webhook_cidrs
 }
 
 # EKS Cluster

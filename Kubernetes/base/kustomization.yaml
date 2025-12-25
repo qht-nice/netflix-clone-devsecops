@@ -9,6 +9,6 @@ resources:
 
 images:
 - name: qhtsg/netflix-backend
-  newTag: "701"
+  newTag: "801"
 - name: qhtsg/netflix-frontend
-  newTag: "701"
+  newTag: "801"
